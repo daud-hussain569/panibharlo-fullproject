@@ -2,52 +2,106 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 
-// Public Pages
-import Home from "./pages/Home";
-import About from "./components/About";
-import Services from "./components/Services";
-import ContactForm from "./components/ContactForm";
-import Login from "./pages/Login"; 
+// Public Pages / Components
+import Home from "./pages/Home.jsx";
+import Products from "./components/Products"; // public products page
+import Contact from "./components/Contact"; // <-- Import the Contact component
+import AdminLogin from "./pages/Admin/Login.jsx";
 
 // Admin Pages
-import AdminLogin from "./pages/Admin/Login";
-import Dashboard from "./pages/Admin/Dashboard";
+import AdminLayout from "./pages/Admin/AdminLayout";
+import AdminDashboard from "./pages/Admin/Dashboard.jsx";
 import Users from "./pages/Admin/Users";
-import Products from "./pages/Admin/Products";
+import AdminProducts from "./pages/Admin/Products"; // admin-only products page
 import BottleOrders from "./pages/Admin/BottleOrders";
 import TankerOrders from "./pages/Admin/TankerOrders";
+import Testimonials from "./pages/Admin/Testimonials";
+import Comments from "./pages/Admin/Comments"; // <-- Add this import
+
+// User Pages
+import UserLogin from "./pages/User/Login.jsx";
+import UserDashboard from "./pages/User/UserDashboard";
+import Register from "./pages/User/Register.jsx";
+import BottleOrderForm from "./pages/User/BottleOrderForm.jsx";
+import TankerOrderForm from "./pages/User/TankerOrderForm.jsx";
+
+// Deliverer Pages
+import DelivererDashboard from "./pages/Deliverer/Dashboard.jsx";
 import Settings from "./pages/Admin/Settings";
-import AdminLayout from "./pages/Admin/AdminLayout"; // Layout wrapper
+
+// Components
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// Context
+import { CartProvider } from "./context/CartContext";
 
 function App() {
   return (
-    <Routes>
-      {/* Public Pages */}
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/services" element={<Services />} />
-      <Route path="/contact" element={<ContactForm />} />
-      <Route path="/login" element={<Login />} />
+    <CartProvider>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/login" element={<UserLogin />} />
+        <Route path="/contact" element={<Contact />} /> {/* <-- Add the route for the contact page */}
+        <Route path="/register" element={<Register />} />
 
-      {/* Admin Login */}
-      <Route path="/admin/login" element={<AdminLogin />} />
+        {/* User protected routes */}
+        <Route
+          path="/user/dashboard"
+          element={
+            <ProtectedRoute role="user">
+              <UserDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/order/bottle" element={<BottleOrderForm />} />
+        <Route path="/order/tanker" element={<TankerOrderForm />} />
 
-      {/* Admin Pages with Layout */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="users" element={<Users />} />
-        <Route path="products" element={<Products />} />
-        <Route path="bottle-orders" element={<BottleOrders />} />
-        <Route path="tanker-orders" element={<TankerOrders />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
+        {/* Admin auth */}
+        <Route path="/admin/login" element={<AdminLogin />} />
 
-      {/* 404 Fallback */}
-      <Route
-        path="*"
-        element={<div className="p-10 text-center">Page Not Found</div>}
-      />
-    </Routes>
+        {/* Admin protected area */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="admin" roles={["admin", "superadmin"]}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<Users />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="bottle-orders" element={<BottleOrders />} />
+          <Route path="tanker-orders" element={<TankerOrders />} />
+          <Route path="testimonials" element={<Testimonials />} />
+          <Route path="comments" element={<Comments />} /> 
+          <Route path="settings" element={<Settings />} />
+        </Route>
+
+        {/* Deliverer protected routes */}
+        <Route
+          path="/deliverer/dashboard"
+          element={
+            <ProtectedRoute role="deliverer">
+              <DelivererDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 404 fallback */}
+        <Route
+          path="*"
+          element={
+            <h1 className="text-center mt-20 text-4xl">
+              404 - Page Not Found
+            </h1>
+          }
+        />
+      </Routes>
+    </CartProvider>
   );
 }
 

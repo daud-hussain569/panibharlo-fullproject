@@ -1,22 +1,39 @@
 // src/components/About.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 export default function About() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
   return (
     <section className="bg-white py-20">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center gap-10">
           
           {/* Image Column */}
-          <div className="md:w-1/2">
-            <div className="w-full h-64 md:h-96 bg-blue-100 rounded-lg flex items-center justify-center">
-              {/* Placeholder for image */}
-              <span className="text-gray-500 text-lg">About Image Here</span>
+          <div
+            className={`md:w-1/2 transform transition-transform duration-1000 ${
+              isVisible ? "translate-x-0 opacity-100" : "translate-x-20 opacity-0"
+            }`}
+          >
+            <div className="w-full h-64 md:h-96 rounded-lg flex items-center justify-center overflow-hidden">
+              <img
+                src="/assets/images/gffdd.jpg.webp" // Replace with your image path
+                alt="Big Truck"
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
 
           {/* Content Column */}
-          <div className="md:w-1/2">
+          <div
+            className={`md:w-1/2 transform transition-transform duration-1000 ${
+              isVisible ? "translate-x-0 opacity-100" : "-translate-x-20 opacity-0"
+            }`}
+          >
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
               We Always Want Safe and Healthy Water for Healthy Life.
             </h2>
@@ -33,9 +50,9 @@ export default function About() {
               Read More
             </a>
           </div>
+
         </div>
       </div>
     </section>
   );
 }
-

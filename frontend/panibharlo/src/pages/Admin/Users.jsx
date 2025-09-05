@@ -1,14 +1,28 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api/axios";
 
-function Users() {
+export default function Users() {
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
-    axios.get("/api/users")
-      .then(res => setUsers(res.data))
-      .catch(err => console.error(err));
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/users"); // -> /api/users
+        setUsers((res.data || []).map(u => ({ ...u, id: u._id })));
+      } catch (e) {
+        setErr(e.response?.data?.message || e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
+
+  if (loading) return <div>Loading users...</div>;
+  if (err) return <div className="text-red-600">Error: {err}</div>;
 
   return (
     <div className="bg-white p-6 rounded shadow">
@@ -24,8 +38,8 @@ function Users() {
         </thead>
         <tbody>
           {users.map(u => (
-            <tr key={u._id} className="border-t">
-              <td className="px-4 py-2">{u._id}</td>
+            <tr key={u.id} className="border-t">
+              <td className="px-4 py-2">{u.id}</td>
               <td className="px-4 py-2">{u.name}</td>
               <td className="px-4 py-2">{u.email}</td>
               <td className="px-4 py-2">{u.role}</td>
@@ -36,5 +50,3 @@ function Users() {
     </div>
   );
 }
-
-export default Users;

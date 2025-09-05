@@ -13,12 +13,6 @@ connectDB();
 
 const seedData = async () => {
   try {
-    await User.deleteMany();
-    await Product.deleteMany();
-    await BottleOrder.deleteMany();
-    await TankerOrder.deleteMany();
-    await Testimonial.deleteMany();
-
     const admin = await User.create({
       name: "Admin",
       email: "admin@example.com",
@@ -32,7 +26,7 @@ const seedData = async () => {
       password: "Deliverer123",
       role: "deliverer"
     });
-
+    
     const customer = await User.create({
       name: "Customer",
       email: "customer@example.com",
@@ -45,7 +39,12 @@ const seedData = async () => {
       { name: "Mineral Water Bottle 5L", description: "Fresh Water", price: 5, stock: 50 },
       { name: "Water Tanker 500L", description: "Clean Water", price: 200, stock: 10 }
     ]);
-
+    await User.create({
+       name: "John Doe",
+       email: "john@example.com",
+       password: "john55667", // will be hashed automatically
+       role: "user"
+    });
     await BottleOrder.create({
       user: customer._id,
       deliverer: deliverer._id,

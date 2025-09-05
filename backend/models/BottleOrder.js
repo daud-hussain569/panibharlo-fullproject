@@ -1,14 +1,23 @@
-// backend/models/BottleOrder.js
 import mongoose from "mongoose";
+import { orderSchema } from "./orderSchema.js"; // Import the base schema
 
-const bottleOrderSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  deliverer: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+// Create a new schema by cloning the base order schema
+const bottleOrderSchema = orderSchema.clone();
+
+// Add fields specific to Bottle Orders
+bottleOrderSchema.add({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
   quantity: { type: Number, required: true },
-  status: { type: String, enum: ["Pending","In Transit","Delivered"], default: "Pending" },
-  address: String
-}, { timestamps: true });
+  size: { type: String },
+});
+
+// Ensure timestamps are enabled for this schema
+bottleOrderSchema.set("timestamps", true);
 
 const BottleOrder = mongoose.model("BottleOrder", bottleOrderSchema);
+
 export default BottleOrder;

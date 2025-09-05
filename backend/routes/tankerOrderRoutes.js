@@ -1,27 +1,31 @@
-// backend/routes/tankerOrderRoutes.js
-import express from "express";
+import express from 'express';
+const router = express.Router();
 import {
   getTankerOrders,
-  getDelivererTankerOrders,
   createTankerOrder,
+  getTankerOrderById,
   updateTankerOrder,
-  deleteTankerOrder
-} from "../controllers/tankerOrderController.js";
+  deleteTankerOrder,
+  getUserTankerOrders,
+  getDelivererTankerOrders,
+  assignTankerDeliverer, // Corrected to import the tanker-specific function
+} from '../controllers/tankerOrderController.js';
+import { protect, admin, deliverer } from '../middleware/authMiddleware.js';
 
-import { protect, restrictTo } from "../middleware/authMiddleware.js";
+router.route('/').get(protect, admin, getTankerOrders).post(protect, createTankerOrder);
 
-const router = express.Router();
+// User-specific route - MUST be before dynamic /:id
+router.route('/my-orders').get(protect, getUserTankerOrders);
 
-// Protect routes
-router.use(protect);
+router.route('/deliverer').get(protect, deliverer, getDelivererTankerOrders);
 
-// Admin / Super Admin routes
-router.get("/", restrictTo("admin","superadmin"), getTankerOrders);
-router.post("/", restrictTo("admin","superadmin","user"), createTankerOrder);
-router.put("/:id", restrictTo("admin","superadmin","deliverer"), updateTankerOrder);
-router.delete("/:id", restrictTo("admin","superadmin"), deleteTankerOrder);
+// Assign deliverer route
+router.route('/:id/assign').put(protect, admin, assignTankerDeliverer);
 
-// Deliverer route
-router.get("/deliverer", restrictTo("deliverer"), getDelivererTankerOrders);
+router
+  .route('/:id')
+  .get(protect, getTankerOrderById)
+  .put(protect, deliverer, updateTankerOrder)
+  .delete(protect, admin, deleteTankerOrder);
 
 export default router;

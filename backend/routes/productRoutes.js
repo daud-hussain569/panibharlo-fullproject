@@ -1,34 +1,21 @@
-// backend/routes/productRoutes.js
-import express from "express";
+import express from 'express';
+const router = express.Router();
 import {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-} from "../controllers/productController.js";
+} from '../controllers/productController.js';
+import { protect, admin } from '../middleware/authMiddleware.js';
 
-import { protect, restrictTo } from "../middleware/authMiddleware.js";
+// Public route to get all products
+router.route('/').get(getProducts).post(protect, admin, createProduct);
 
-const router = express.Router();
-
-// Protect all routes and restrict to admin/superadmin
-router.use(protect);
-router.use(restrictTo("admin","superadmin"));
-
-// GET /api/products - get all products
-router.get("/", getProducts);
-
-// GET /api/products/:id - get single product
-router.get("/:id", getProductById);
-
-// POST /api/products - create product
-router.post("/", createProduct);
-
-// PUT /api/products/:id - update product
-router.put("/:id", updateProduct);
-
-// DELETE /api/products/:id - delete product
-router.delete("/:id", deleteProduct);
+router
+  .route('/:id')
+  .get(getProductById)
+  .put(protect, admin, updateProduct)
+  .delete(protect, admin, deleteProduct);
 
 export default router;

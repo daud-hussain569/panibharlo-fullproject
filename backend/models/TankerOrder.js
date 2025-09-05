@@ -1,14 +1,23 @@
 // backend/models/TankerOrder.js
 import mongoose from "mongoose";
+import { orderSchema } from "./orderSchema.js"; // Import the base schema
 
-const tankerOrderSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  deliverer: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+// Create a new schema by copying the base order schema
+const tankerOrderSchema = orderSchema.clone();
+
+tankerOrderSchema.add({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
   volume: { type: Number, required: true }, // Liters
-  status: { type: String, enum: ["Pending","In Transit","Delivered"], default: "Pending" },
-  address: String
-}, { timestamps: true });
+  truckType: { type: String },
+  deliveryDate: { type: Date },
+});
+
+// Ensure timestamps are enabled for this schema
+tankerOrderSchema.set('timestamps', true);
 
 const TankerOrder = mongoose.model("TankerOrder", tankerOrderSchema);
 export default TankerOrder;

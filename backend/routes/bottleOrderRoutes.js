@@ -1,27 +1,32 @@
-// backend/routes/bottleOrderRoutes.js
-import express from "express";
+import express from 'express';
+const router = express.Router();
 import {
   getBottleOrders,
-  getDelivererOrders,
   createBottleOrder,
+  getBottleOrderById,
   updateBottleOrder,
-  deleteBottleOrder
-} from "../controllers/bottleOrderController.js";
+  deleteBottleOrder,
+  getUserOrders,
+  getDelivererOrders,
+  assignDeliverer,
+} from '../controllers/bottleOrderController.js';
+import { protect, admin, deliverer } from '../middleware/authMiddleware.js';
 
-import { protect, restrictTo } from "../middleware/authMiddleware.js";
+router.route('/').get(protect, admin, getBottleOrders).post(protect, createBottleOrder);
 
-const router = express.Router();
+// User-specific route - MUST be before dynamic /:id
+router.route('/my-orders').get(protect, getUserOrders);
 
-// Protect routes
-router.use(protect);
+// Deliverer-specific route
+router.route('/deliverer').get(protect, deliverer, getDelivererOrders);
 
-// Admin / Super Admin routes
-router.get("/", restrictTo("admin","superadmin"), getBottleOrders);
-router.post("/", restrictTo("admin","superadmin","user"), createBottleOrder);
-router.put("/:id", restrictTo("admin","superadmin","deliverer"), updateBottleOrder);
-router.delete("/:id", restrictTo("admin","superadmin"), deleteBottleOrder);
+// Assign deliverer route
+router.route('/:id/assign').put(protect, admin, assignDeliverer);
 
-// Deliverer route
-router.get("/deliverer", restrictTo("deliverer"), getDelivererOrders);
+router
+  .route('/:id')
+  .get(protect, getBottleOrderById)
+  .put(protect, deliverer, updateBottleOrder)
+  .delete(protect, admin, deleteBottleOrder);
 
 export default router;

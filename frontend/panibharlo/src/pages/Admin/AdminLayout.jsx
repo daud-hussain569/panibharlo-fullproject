@@ -10,9 +10,10 @@ function AdminLayout() {
     }`;
 
   const handleLogout = () => {
+    // Clear token and role on logout
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    navigate("/login");
+    navigate("/admin/login"); // redirect to admin login
   };
 
   return (
@@ -26,6 +27,7 @@ function AdminLayout() {
           <NavLink to="products" className={linkClasses}>Products</NavLink>
           <NavLink to="bottle-orders" className={linkClasses}>Bottle Orders</NavLink>
           <NavLink to="tanker-orders" className={linkClasses}>Tanker Orders</NavLink>
+          <NavLink to="comments" className={linkClasses}>Comments</NavLink>
           <NavLink to="settings" className={linkClasses}>Settings</NavLink>
         </nav>
         <div className="mt-auto">

@@ -1,314 +1,188 @@
-// src/pages/Admin/BottleOrders.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-
-const API_BASE = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
+import React, { useState, useEffect } from "react";
+import api from "../../api/axios";
 
 export default function BottleOrders() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [total, setTotal] = useState(0);
-
-  // Filters
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState(""); // '', 'pending','assigned','delivered','cancelled'
-  const [from, setFrom] = useState(""); // yyyy-mm-dd
-  const [to, setTo] = useState("");     // yyyy-mm-dd
-
-  const headers = useMemo(() => {
-    const token = localStorage.getItem("token"); // admin JWT
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, []);
-
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      setErr("");
-      const params = { page, limit };
-      if (q) params.q = q;
-      if (status) params.status = status;
-      if (from) params.from = from;
-      if (to) params.to = to;
-
-      const { data } = await axios.get(`${API_BASE}/api/bottle-orders`, {
-        params,
-        headers,
-      });
-
-      // Expecting { orders, total }
-      setOrders(data?.orders || []);
-      setTotal(data?.total ?? 0);
-    } catch (e) {
-      setErr(e?.response?.data?.message || e.message || "Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [bottleOrders, setBottleOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [deliverers, setDeliverers] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, status, headers]); // re-fetch on page or status change; for q/from/to we click "Apply" button
+    const fetchOrdersAndDeliverers = async () => {
+      try {
+        setLoading(true);
+        const [ordersRes, usersRes, productsRes] = await Promise.all([
+          api.get("/bottle-orders"),
+          api.get("/users"),
+          api.get("/products"), // Fetch products
+        ]);
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
+        setBottleOrders(ordersRes.data.map((o) => ({ ...o, id: o._id || o.id })));
+        setDeliverers(usersRes.data.filter(u => u.role === 'deliverer'));
+        setProducts(productsRes.data); // Store the fetched products
+        setError("");
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Failed to fetch data"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrdersAndDeliverers();
+  }, []);
 
-  const handleApplyFilters = () => {
-    setPage(1);
-    fetchOrders();
-  };
+  const handleAddOrder = async () => {
+    // Create a dropdown for product selection
+    const productOptions = products.map(p => `${p._id}:${p.name} - Rs.${p.price}`).join('\\n');
+    const selectedProduct = window.prompt(`Select a product:\\n${productOptions}`);
+    if (!selectedProduct) return;
 
-  const clearFilters = () => {
-    setQ("");
-    setStatus("");
-    setFrom("");
-    setTo("");
-    setPage(1);
-    fetchOrders();
-  };
+    const productId = selectedProduct.split(':')[0];
 
-  const updateStatus = async (id, newStatus) => {
+    // For simplicity, we'll create a dummy user for admin-created orders
+    // A better approach would be to select an existing user.
+    const userName = window.prompt("Enter customer name:", "Guest");
+    if (!userName) return;
+
+    const phone = window.prompt("Enter customer phone:");
+    const address = window.prompt("Enter customer address:");
+    const quantity = window.prompt("Enter quantity:");
+
+    if (!productId || !phone || !address || !quantity || isNaN(quantity)) {
+      alert("Product, phone, address, and a numeric quantity are required.");
+      return;
+    }
+
     try {
-      setLoading(true);
-      await axios.patch(
-        `${API_BASE}/api/bottle-orders/${id}`,
-        { deliveryStatus: newStatus },
-        { headers }
-      );
-      // Optimistic refresh
-      setOrders((prev) =>
-        prev.map((o) => (o._id === id ? { ...o, deliveryStatus: newStatus } : o))
-      );
-    } catch (e) {
-      alert(e?.response?.data?.message || "Failed to update status");
-    } finally {
-      setLoading(false);
+      // Note: The backend expects a 'user' ID. For admin-created orders for non-registered
+      // users, the backend logic might need adjustment. Here, we're sending what the
+      // controller expects, but the `user` field might be an issue if not handled.
+      // For now, we'll send the required fields for the order itself.
+      const res = await api.post("/bottle-orders", {
+        product: productId,
+        // We are creating an order for a "guest" user.
+        // The backend `createBottleOrder` uses `req.user._id`, so this will be
+        // attributed to the currently logged-in admin.
+        // We'll add customerName and phone to the order details.
+        customerDetails: { name: userName, phone },
+        address,
+        contact: phone,
+        quantity: Number(quantity),
+      });
+      const newOrder = { ...res.data, id: res.data._id || res.data.id };
+      setBottleOrders((prevOrders) => [newOrder, ...prevOrders]);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to add order");
     }
   };
 
-  const assignDeliverer = async (id, delivererIdOrEmail) => {
+  const handleDeleteOrder = async (idToDelete) => {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
     try {
-      setLoading(true);
-      await axios.patch(
-        `${API_BASE}/api/bottle-orders/${id}`,
-        { assignedTo: delivererIdOrEmail },
-        { headers }
-      );
-      setOrders((prev) =>
-        prev.map((o) =>
-          o._id === id ? { ...o, assignedTo: delivererIdOrEmail } : o
-        )
-      );
-    } catch (e) {
-      alert(e?.response?.data?.message || "Failed to assign deliverer");
-    } finally {
-      setLoading(false);
+      await api.delete(`/bottle-orders/${idToDelete}`);
+      setBottleOrders((currentOrders) => currentOrders.filter((order) => order.id !== idToDelete));
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete order");
     }
   };
 
-  const removeOrder = async (id) => {
-    if (!confirm("Delete this order?")) return;
+  const handleUpdateStatus = async (order) => {
+    const newStatus = window.prompt("Update status (pending, delivered, cancelled):", order.status);
+    if (!newStatus || newStatus === order.status) return;
+
     try {
-      setLoading(true);
-      await axios.delete(`${API_BASE}/api/bottle-orders/${id}`, { headers });
-      setOrders((prev) => prev.filter((o) => o._id !== id));
-    } catch (e) {
-      alert(e?.response?.data?.message || "Failed to delete order");
-    } finally {
-      setLoading(false);
+      const res = await api.put(`/bottle-orders/${order.id}`, { status: newStatus });
+      const updatedOrder = { ...res.data, id: res.data._id || res.data.id };
+      setBottleOrders((prevOrders) =>
+        prevOrders.map((o) => (o.id === order.id ? updatedOrder : o))
+      );
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update order status");
     }
   };
+
+  const handleAssignDeliverer = async (orderId, delivererId) => {
+    if (!delivererId) return;
+    try {
+      const res = await api.put(`/bottle-orders/${orderId}/assign`, { delivererId });
+      const updatedOrder = { ...res.data, id: res.data._id || res.data.id };
+      setBottleOrders((prevOrders) =>
+        prevOrders.map((o) => (o.id === orderId ? updatedOrder : o))
+      );
+    } catch (err) {
+      alert(
+        err.response?.data?.message || "Failed to assign deliverer"
+      );
+    }
+  };
+
+
+  if (loading) return <div className="p-6 text-center">Loading orders...</div>;
+  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Bottle Orders</h1>
-
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-          <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Search (name/phone)</label>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="e.g. Ali or 03xxxxxxxxx"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="assigned">Assigned</option>
-              <option value="delivered">Delivered</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">From</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">To</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            />
-          </div>
-
-          <div className="md:col-span-5 flex gap-2">
-            <button
-              onClick={handleApplyFilters}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-            >
-              Apply
-            </button>
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 rounded-lg border hover:bg-gray-50"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
+    <div className="p-6 bg-white rounded-2xl shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Manage Bottle Orders</h1>
+        <button
+          onClick={handleAddOrder}
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+        >
+          Add New Order
+        </button>
       </div>
 
-      {/* Error / Loading */}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
-          {err}
-        </div>
-      )}
-      {loading && (
-        <div className="mb-4 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
-          Loading...
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-x-auto border rounded-xl">
-        <table className="min-w-[900px] w-full">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto relative shadow-md sm:rounded-lg">
+        <table className="w-full text-sm text-left text-gray-600">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-100">
             <tr>
-              <th className="p-3 text-left">Order #</th>
-              <th className="p-3 text-left">Customer</th>
-              <th className="p-3 text-left">Phone</th>
-              <th className="p-3 text-left">Address</th>
-              <th className="p-3 text-left">Items</th>
-              <th className="p-3 text-left">Total</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Assigned</th>
-              <th className="p-3 text-left">Created</th>
-              <th className="p-3 text-center">Actions</th>
+              <th scope="col" className="px-6 py-3">Customer</th>
+              <th scope="col" className="px-6 py-3">Product</th>
+              <th scope="col" className="px-6 py-3">Quantity</th>
+              <th scope="col" className="px-6 py-3">Status</th>
+              <th scope="col" className="px-6 py-3">Assign To</th>
+              <th scope="col" className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.length === 0 && !loading ? (
-              <tr>
-                <td colSpan={10} className="p-6 text-center text-gray-500">
-                  No bottle orders found.
+            {bottleOrders.map((order) => (
+              <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
+                <td className="px-6 py-4 font-medium text-gray-900">
+                  <div>{order.user?.name || order.customerDetails?.name || 'N/A'}</div>
+                  <div className="text-xs text-gray-500">{order.contact || order.user?.email}</div>
+                </td>
+                <td className="px-6 py-4">
+                  {order.product?.name || 'N/A'}
+                </td>
+                <td className="px-6 py-4">{order.quantity}</td>
+                <td className="px-6 py-4 capitalize">{order.status}</td>
+                <td className="px-6 py-4">
+                  <select
+                    value={order.deliverer?._id || ""}
+                    onChange={(e) => handleAssignDeliverer(order.id, e.target.value)}
+                    className="p-1 border rounded bg-white"
+                    disabled={order.status === 'delivered'}
+                  >
+                    <option value="">Unassigned</option>
+                    {deliverers.map(d => (
+                      <option key={d._id} value={d._id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-6 py-4 text-right space-x-4">
+                  <button onClick={() => handleUpdateStatus(order)} className="font-medium text-blue-600 hover:underline">Update Status</button>
+                  <button onClick={() => handleDeleteOrder(order.id)} className="font-medium text-red-600 hover:underline">Delete</button>
                 </td>
               </tr>
-            ) : (
-              orders.map((o) => {
-                const itemSummary =
-                  o.items?.map?.((it) => `${it.size}L x ${it.quantity}`)?.join(", ") ||
-                  "-";
-                const created =
-                  o.createdAt ? new Date(o.createdAt).toLocaleString() : "-";
-                return (
-                  <tr key={o._id} className="border-t hover:bg-gray-50">
-                    <td className="p-3">{o.orderNumber || o._id.slice(-6)}</td>
-                    <td className="p-3">{o.customerName || o.user?.name || "-"}</td>
-                    <td className="p-3">{o.phone || o.user?.phone || "-"}</td>
-                    <td className="p-3 max-w-[220px] truncate" title={o.address}>
-                      {o.address || "-"}
-                    </td>
-                    <td className="p-3">{itemSummary}</td>
-                    <td className="p-3">{o.totalPrice != null ? `Rs ${o.totalPrice}` : "-"}</td>
-                    <td className="p-3">
-                      <select
-                        value={o.deliveryStatus || "pending"}
-                        onChange={(e) => updateStatus(o._id, e.target.value)}
-                        className="border rounded-lg px-2 py-1"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="assigned">Assigned</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </td>
-                    <td className="p-3">
-                      <input
-                        className="border rounded-lg px-2 py-1 w-40"
-                        placeholder="deliverer id/email"
-                        defaultValue={o.assignedTo || ""}
-                        onBlur={(e) => {
-                          const val = e.target.value.trim();
-                          if (val && val !== (o.assignedTo || ""))
-                            assignDeliverer(o._id, val);
-                        }}
-                      />
-                    </td>
-                    <td className="p-3">{created}</td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => removeOrder(o._id)}
-                        className="px-3 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
+            ))}
           </tbody>
         </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Showing {(page - 1) * limit + 1}–
-          {Math.min(page * limit, total)} of {total}
-        </div>
-        <div className="flex gap-2">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="px-3 py-1 rounded-lg border disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span className="px-3 py-1 rounded-lg border bg-gray-50">
-            {page} / {totalPages}
-          </span>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="px-3 py-1 rounded-lg border disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
       </div>
     </div>
   );

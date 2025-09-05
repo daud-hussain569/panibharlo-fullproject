@@ -32,7 +32,7 @@ export const updateTestimonial = asyncHandler(async (req, res) => {
 export const deleteTestimonial = asyncHandler(async (req, res) => {
   const testimonial = await Testimonial.findById(req.params.id);
   if(testimonial) {
-    await testimonial.remove();
+    await testimonial.deleteOne();
     res.json({ message: "Testimonial removed" });
   } else {
     res.status(404);
