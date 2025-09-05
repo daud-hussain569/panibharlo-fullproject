@@ -17,7 +17,8 @@ It allows admins, deliverers, and users to manage water bottle and tanker orders
 
 ## 🖼️ Project Preview
 
-![Project Screenshot](frontend/panibharlo/public/assets/images/banner/abc.jpg)
+![Project Screenshot](frontend/panibharlo/public/assets/images/asdfg.jpeg.png)
+(frontend/panibharlo/public/assets/images/vhbcvh.jpeg.png)
 
 ---
 
@@ -35,17 +36,10 @@ Panibharlo_fullproject/
 ├── frontend/ # React + Tailwind frontend
 └── README.md # Project documentation
 
-yaml
-Copy code
-
 ---
 
-## 🔧 Installation & Setup
 
-### 1️⃣ Clone the repository
-```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-cd Panibharlo_fullproject
+
 2️⃣ Setup Backend
 bash
 Copy code
