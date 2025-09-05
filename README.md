@@ -17,9 +17,9 @@ It allows admins, deliverers, and users to manage water bottle and tanker orders
 
 ## 🖼️ Project Preview
 
-![Project Screenshot 1](https://github.com/daud-hussain569/panibharlo-fullproject/blob/main/Screenshot%202025-09-05%20141520.png?raw=true)
+![Project Screenshot 1](https://github.com/daud-hussain569/panibharlo-fullproject/blob/main/asdfg.jpeg.png?raw=true)
+![Project Screenshot 2](https://github.com/daud-hussain569/panibharlo-fullproject/blob/main/vhbcvh.jpeg.png?raw=true)
 
-![Project Screenshot 2](https://github.com/daud-hussain569/panibharlo-fullproject/blob/main/asdfg.jpeg.png?raw=true)
 
 
 ---
